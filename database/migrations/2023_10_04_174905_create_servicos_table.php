@@ -15,9 +15,8 @@ class CreateServicosTable extends Migration
     {
         Schema::create('servicos', function (Blueprint $table) {
             $table->id();
-            $table->string('servicos');
-
-            
+            $table->string('servico');
+            $table->integer('percentual_admin')->default(0);
             $table->timestamps();
         });
     }
