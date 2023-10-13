@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Servico extends Model
 {
     use HasFactory;
+
+    protected $fillable = ['servico', 'percentual_admin'];
 }

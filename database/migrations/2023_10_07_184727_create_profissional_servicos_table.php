@@ -15,14 +15,12 @@ class CreateProfissionalServicosTable extends Migration
     {
         Schema::create('profissional_servicos', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('profissional_id');
             $table->unsignedBigInteger('servico_id');
-
             $table->foreign('user_id')->references('id')->on('users')->onUpdate('no action')->onDelete('cascade');
             $table->foreign('profissional_id')->references('id')->on('profissionals')->onUpdate('no action')->onDelete('cascade');
             $table->foreign('servico_id')->references('id')->on('servicos')->onUpdate('no action')->onDelete('cascade');
-            $table->bigInteger('price');
+            $table->float('price', 8, 2);
             $table->timestamps();
         });
     }
