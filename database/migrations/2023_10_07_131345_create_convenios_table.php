@@ -16,7 +16,7 @@ class CreateConveniosTable extends Migration
         Schema::create('convenios', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->boolean('active')->default('true');
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }

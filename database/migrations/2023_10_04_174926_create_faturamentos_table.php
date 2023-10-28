@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateFaturamentoTable extends Migration
+class CreateFaturamentosTable extends Migration
 {
     /**
      * Run the migrations.
@@ -17,7 +17,8 @@ class CreateFaturamentoTable extends Migration
             $table->id();
             $table->integer('mes');
             $table->unsignedInteger('ano');
-            $table->float('valor', 8, 2);
+            $table->float('valor_total_atendimentos', 8, 2);
+            $table->float('value_retido_clinica', 8, 2);
             $table->timestamps();
         });
     }

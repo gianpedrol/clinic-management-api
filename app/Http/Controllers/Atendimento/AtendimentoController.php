@@ -7,6 +7,11 @@ use App\Models\Atendimento;
 use App\Models\Faturamento;
 use App\Models\FinanceiroAdmin;
 use App\Models\FinanceiroProfissional;
+use App\Models\Pacote;
+use App\Models\Procedimento;
+use App\Models\ProcedimentoAtendimento;
+use App\Models\ProfissionalAgenda;
+use App\Models\ProfissionalProcedimento;
 use App\Models\ProfissionalServico;
 use App\Models\Servico;
 use App\Models\User;
@@ -15,97 +20,231 @@ use Illuminate\Http\Request;
 
 class AtendimentoController extends Controller
 {
-    public function __construct()
+    /*  public function __construct()
     {
         $this->middleware('auth:api');
 
         if (!auth()->user()) {
             return response()->json(['error' => 'Unauthorized access'], 401);
         }
-    }
+    }*/
 
 
     public function criarAtendimento(Request $request)
     {
-        $data = $request->only('client_id', 'servico_id', 'profissional_id', 'convenio_id', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount');
+        $data = $request->only('client_id', 'tipo_servico', 'convenio_id', 'procedimentos', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount', 'receipt');
 
         // Verifica se o paciente (client_id) existe como usuário e é um cliente (role_id 1)
-        $paciente = User::where('id', $data['client_id'])->where('role_id', 1)->first();
+        $paciente = User::where('id', $data['client_id'])->first();
         if (!$paciente) {
             return response()->json(['message' => 'Paciente não encontrado ou não é um cliente válido'], 404);
         }
 
-        // Verifica se o profissional (profissional_id) existe como usuário e é um profissional (role_id 2)
-        $profissional = User::where('id', $data['profissional_id'])->where('role_id', 2)->first();
-        if (!$profissional) {
-            return response()->json(['message' => 'Profissional não encontrado ou não é um profissional válido'], 404);
-        }
+        if ($data['tipo_servico'] == 1) {
+            $pacote = Pacote::where('id', $data['pacote_id'])->first();
 
-        $servico = Servico::where('id', $data['servico_id'])->first();
+            $pacote['procedimentos'] = Procedimento::where("pacote_id", $pacote->id)->get();
 
-        if (!$servico) {
-            return response()->json(['message' => 'Serviço não encontrado ou não é um Serviço válido'], 404);
-        }
+            if (!$pacote) {
+                return response()->json(['message' => 'Serviço não encontrado ou não é um Serviço válido'], 404);
+            }
 
-        $servicoProfissional = ProfissionalServico::where("profissional_id", $profissional->id)->where('servico_id', $servico->id)->first();
+            $valorTotalAtendimento = $pacote->valor;
+            $percentualClinica = $pacote->percentual_admin; // Percentual da clínica
+            $discount = $data['discount']; // Valor do desconto
 
-        $descontoEmPorcentagem = $data['discount'];
-        $precoEstimado = $servicoProfissional->price;
+            // Certifique-se de que o desconto não exceda o valor do pacote
+            if (
+                $discount > $valorTotalAtendimento
+            ) {
+                $discount = $valorTotalAtendimento;
+            }
 
-        if (is_numeric($descontoEmPorcentagem)) {
+            // Subtrair o desconto da porcentagem da clínica
+            $percentualClinica -= $discount;
 
-            $desconto = ($precoEstimado * $descontoEmPorcentagem) / 100;
-            $precoTotal = $precoEstimado - $desconto;
-            $valorProfissional = $precoEstimado  - $desconto - ($precoEstimado * $servico->percentual_admin / 100);
-            $valorAdmin = $precoTotal * $servico->percentual_admin / 100;
-        } else {
-            $precoTotal = $precoEstimado;
-            $valorProfissional = $precoEstimado  - ($precoEstimado * $servico->percentual_admin / 100);
-            $valorAdmin = $precoTotal * $servico->percentual_admin / 100;
-        }
+            // Certifique-se de que o percentual da clínica não seja negativo
+            if ($percentualClinica < 0) {
+                $percentualClinica = 0; // Defina um mínimo de 0 para a porcentagem da clínica
+            }
 
+            // Calcular o valor que ficará para a clínica com base na porcentagem
+            $valorClinica = ($percentualClinica / 100) * $valorTotalAtendimento;
 
-        try {
-            \DB::beginTransaction();
-            // Verifique se a data está no formato Y-m-d e a hora no formato H:i
-            $data = $data['data'];
-            $hora = $data['hora'];
+            // Calcular o valor que ficará para o profissional (dividir o restante entre os procedimentos)
+            $valorProfissional = $valorTotalAtendimento - $valorClinica;
 
-            if (Carbon::createFromFormat('Y-m-d H:i', "$data $hora", 'UTC')->format('Y-m-d H:i') === "$data $hora") {
-                // A data e a hora estão no formato correto
-                $atendimento = Atendimento::create([
-                    'client_id' => $paciente->id,
-                    'servico_id' => $servico->id,
-                    'profissional_id' => $profissional->id,
-                    'convenio_id' => null,
-                    'data' => $data,
-                    'hora' => $hora,
-                    'status' => $data['status'],
-                    'metodo_pagamento' => $data['metodo_pagamento'],
-                    'descricao' => $data['descricao'],
-                    'preco_estimado' =>  $precoEstimado,
-                    'discount' => $data['discount'],
-                    'preco_total' => $precoTotal,
-                ]);
+            // Criar o Atendimento
+            $atendimento = Atendimento::create([
+                'client_id' => $data['client_id'],
+                'tipo_servico' => $data['tipo_servico'],
+                'convenio_id' => $data['convenio_id'],
+                'metodo_pagamento' => $data['metodo_pagamento'],
+                'descricao' => $data['descricao'],
+                'discount' => $data['discount'],
+                'preco_estimado' => $pacote->valor,
+                'preco_total' => $pacote->valor
+            ]);
 
-                FinanceiroProfissional::create([
-                    'profissional_id' => $profissional->id,
-                    'atendimento_id' => $atendimento->id,
-                    'value' => $valorProfissional
-                ]);
-
+            if ($data['receipt'] == true) {
+                $atendimento->update(['receipt' => true]);
+                // Registrar os valores no banco de dados
                 FinanceiroAdmin::create([
                     'atendimento_id' => $atendimento->id,
-                    'value' => $valorAdmin
+                    'value_atendimento' => $valorTotalAtendimento,
+                    'value_clinica' => $valorClinica,
+                    'receipt' => $data['receipt']
                 ]);
-                \DB::commit();
-                return response()->json(['message' => 'Atendimento agendado com sucesso', 'data' => $atendimento], 201);
-            } else {
-                return response()->json(['message' => 'Data ou hora incorretas'], 400);
+
+                $mesAtual = date('m');
+                $anoAtual = date('Y');
+
+                $faturamentoMensal = Faturamento::where('mes', $mesAtual)->where('ano', $anoAtual)->first();
+
+                // Se não houver um registro para o mês e ano atuais, crie um novo
+                if (!$faturamentoMensal) {
+                    Faturamento::create([
+                        'mes' => $mesAtual,
+                        'ano' => $anoAtual,
+                        'valor_total_atendimentos' => $valorTotalAtendimento,
+                        'value_retido_clinica' => $valorClinica,
+                    ]);
+                } else {
+                    // Caso contrário, atualize os valores existentes
+                    $faturamentoMensal->valor_total_atendimentos += $valorTotalAtendimento;
+                    $faturamentoMensal->value_retido_clinica += $valorClinica;
+                    $faturamentoMensal->save();
+                }
             }
-        } catch (\Exception $e) {
-            \DB::rollBack();
-            return response()->json(['message' => 'Ocorreu um erro ao agendar o atendimento', 'error' => $e->getMessage()], 500);
+
+            // Loop through the procedures in the request
+            foreach ($data['procedimentos'] as $procedureData) {
+                // Create a procedure record for each procedure
+                $procedure = ProcedimentoAtendimento::create([
+                    'procedimento_id' => $procedureData['procedimento_id'],
+                    'data' => $procedureData['data'],
+                    'hora_inicio' => $procedureData['hora_inicio'],
+                    'hora_fim' => $procedureData['hora_fim'],
+                    'profissional_id' => $procedureData['profissional_id'],
+                    'valor_procedimento_profissional' => $valorProfissional
+                ]);
+
+                // Create and save the agenda record for the professional
+                ProfissionalAgenda::create([
+                    'profissional_id' => $procedureData['profissional_id'],
+                    'data' => $procedureData['data'],
+                    'hora_inicio' => $procedureData['hora_inicio'],
+                    'hora_fim' => $procedureData['hora_fim'],
+                ]);
+            }
+        } else if ($data['tipo_servico'] == 2) {
+
+            // Criar o Atendimento
+            $atendimento = Atendimento::create([
+                'client_id' => $data['client_id'],
+                'tipo_servico' => $data['tipo_servico'],
+                'convenio_id' => $data['convenio_id'],
+                'metodo_pagamento' => $data['metodo_pagamento'],
+                'descricao' => $data['descricao'],
+                'discount' => $data['discount'],
+            ]);
+
+            $totalAtendimento = 0;
+
+
+            // Loop through the procedures in the request
+            foreach ($data['procedimentos'] as $procedureData) {
+                $procedimento = Procedimento::where("pacote_id", $procedureData['procedimento_id'])->get();
+                // Create a procedure record for each procedure
+                $profissional = User::findOrfail($data['profissional_id']);
+
+                $procedimentoProfissional = ProfissionalProcedimento::where('user_id', $profissional->id)->where('procedimento_id', $procedimento->id)->first();
+
+                // Verificar se há um desconto, subtrair do percentual da clínica
+                $percentualClinica = $procedimento->percentual_clinic;
+                if (isset($data['discount'])) {
+                    $percentualClinica -= $data['discount'];
+                }
+
+                // Verificar se o percentual da clínica é negativo e ajustá-lo para um mínimo de 0
+                if ($percentualClinica < 0) {
+                    $percentualClinica = 0;
+                }
+
+                // Calcular o valor para o profissional (preço do procedimento do profissional)
+                $precoProfissional = $profissional->procedimentos()->where('procedimento_id', $procedimento->id)->first()->price;
+
+                // Calcular o valor que ficará para a clínica com base no percentual
+                $valorClinica = ($percentualClinica / 100) * $precoProfissional;
+
+                // Adicionar o valor do procedimento ao valor total do atendimento
+                $totalAtendimento += $precoProfissional;
+
+                $procedure = ProcedimentoAtendimento::create([
+                    'procedimento_id' => $procedimento,
+                    'data' => $procedureData['data'],
+                    'hora_inicio' => $procedureData['hora_inicio'],
+                    'hora_fim' => $procedureData['hora_fim'],
+                    'profissional_id' => $procedureData['profissional_id'],
+                    'valor_procedimento_profissional' => $precoProfissional
+                ]);
+
+
+                // Create and save the agenda record for the professional
+                ProfissionalAgenda::create([
+                    'profissional_id' => $procedureData['profissional_id'],
+                    'data' => $procedureData['data'],
+                    'hora_inicio' => $procedureData['hora_inicio'],
+                    'hora_fim' => $procedureData['hora_fim'],
+                ]);
+            }
+
+            // Atualizar o valor total do atendimento no registro de atendimento
+            $atendimento->preco_total = $totalAtendimento;
+            $percentualClinica = $procedimento->percentual_clinic;
+            if (isset($data['discount'])) {
+                $percentualClinica -= $data['discount'];
+            }
+
+            // Verificar se o percentual da clínica é negativo e ajustá-lo para um mínimo de 0
+            $percentualClinica = max(0, $percentualClinica);
+
+            $valorClinica = ($percentualClinica / 100) * $totalAtendimento;
+
+            if ($data['receipt'] == true) {
+
+                $atendimento->update(['receipt' => true]);
+
+                // Criar o registro de FinanceiroAdmin
+                FinanceiroAdmin::create([
+                    'atendimento_id' => $atendimento->id,
+                    'value_atendimento' => $totalAtendimento,
+                    'value_clinica' => $valorClinica,
+                    'receipt' => true,
+                ]);
+
+                // Obter o mês e o ano atuais
+                $mes = date('n'); // Mês atual
+                $ano = date('Y'); // Ano atual
+
+                // Verificar se já existe um registro de faturamento para este mês e ano
+                $faturamento = Faturamento::where('mes', $mes)->where('ano', $ano)->first();
+
+                if ($faturamento) {
+                    // Atualizar o registro de faturamento existente
+                    $faturamento->valor_total_atendimentos += $totalAtendimento;
+                    $faturamento->value_retido_clinica += $valorClinica;
+                    $faturamento->save();
+                } else {
+                    // Criar um novo registro de faturamento
+                    Faturamento::create([
+                        'mes' => $mes,
+                        'ano' => $ano,
+                        'valor_total_atendimentos' => $totalAtendimento,
+                        'value_retido_clinica' => $valorClinica,
+                    ]);
+                }
+            }
         }
     }
 
@@ -140,41 +279,88 @@ class AtendimentoController extends Controller
     {
         $atendimento = Atendimento::find($id);
 
-        if (!$atendimento) {
-            return response()->json(['message' => 'Atendimento não encontrado'], 404);
+        if ($atendimento->receipt == false) {
+            if (!$atendimento) {
+                return response()->json(['message' => 'Atendimento não encontrado'], 404);
+            }
+
+            $valueAdmin = FinanceiroAdmin::where('atendimento_id', $atendimento->id)->first();
+
+            // Obtém o mês e o ano do atendimento
+            $dataAtendimento = Carbon::parse($atendimento->data);
+            $mes = $dataAtendimento->month;
+            $ano = $dataAtendimento->year;
+
+            // Verifica se já existe um registro de faturamento para o mês e ano do atendimento
+            $faturamento = Faturamento::where('mes', $mes)->where('ano', $ano)->first();
+
+            try {
+                \DB::beginTransaction();
+                // Atualiza o status do atendimento para "Finalizado" (ou o valor apropriado)
+                $atendimento->update(['status' => 3]);
+                $valueAdmin->update(['receipt' => true]);
+
+                if ($faturamento) {
+
+                    $faturamento->valor +=  $valueAdmin->value;
+                    $faturamento->save();
+                } else {
+                    // Se não existir um registro de faturamento, crie um novo
+                    Faturamento::create([
+                        'mes' => $mes,
+                        'ano' => $ano,
+                        'valor' =>  $valueAdmin->value,
+                    ]);
+                }
+
+                \DB::commit();
+                return response()->json(['message' => 'Atendimento finalizado com sucesso'], 200);
+            } catch (\Throwable $e) {
+                \DB::rollBack();
+                // Lide com exceções ou erros, se necessário
+                return response()->json(['message' => 'Ocorreu um erro ao finalizar o atendimento', 'error' => $e->getMessage()], 500);
+            }
+        } else {
+            try {
+                \DB::beginTransaction();
+                // Atualiza o status do atendimento para "Finalizado" (ou o valor apropriado)
+                $atendimento->update(['status' => 3]);
+
+                /** CRIAR  */
+
+                \DB::commit();
+                return response()->json(['message' => 'Atendimento finalizado com sucesso'], 200);
+            } catch (\Throwable $e) {
+                \DB::rollBack();
+                // Lide com exceções ou erros, se necessário
+                return response()->json(['message' => 'Ocorreu um erro ao finalizar o atendimento', 'error' => $e->getMessage()], 500);
+            }
         }
+    }
 
-        $valueAdmin = FinanceiroAdmin::where('atendimento_id', $atendimento->id)->first();
+    public function finalizarProcedimentoProfissional(Request $request)
+    {
 
-        // Obtém o mês e o ano do atendimento
-        $dataAtendimento = Carbon::parse($atendimento->data);
-        $mes = $dataAtendimento->month;
-        $ano = $dataAtendimento->year;
+        $data = $request->only('profissional_id', 'atendimento_id', 'procedimento_id');
 
-        // Verifica se já existe um registro de faturamento para o mês e ano do atendimento
-        $faturamento = Faturamento::where('mes', $mes)->where('ano', $ano)->first();
+        $profissional = User::find($data['profissional_id']);
+        $atendimento = Atendimento::find($data['atendimento_id']);
+        $procedimentoAtendimento = ProcedimentoAtendimento::where('atendimento_id', $atendimento->id)->where('profissional_id', $profissional->id)->first();
 
         try {
             \DB::beginTransaction();
-            // Atualiza o status do atendimento para "Finalizado" (ou o valor apropriado)
-            $atendimento->update(['status' => 3]);
-            $valueAdmin->update(['receipt' => true]);
 
-            if ($faturamento) {
+            FinanceiroProfissional::create([
+                'profissional_id' => $profissional->id,
+                'atendimento_id' => $atendimento->id,
+                'procedimento_id' => $procedimentoAtendimento->procedimento_id,
+                'value' => $procedimentoAtendimento->valor_procedimento_profissional
+            ]);
 
-                $faturamento->valor +=  $valueAdmin->value;
-                $faturamento->save();
-            } else {
-                // Se não existir um registro de faturamento, crie um novo
-                Faturamento::create([
-                    'mes' => $mes,
-                    'ano' => $ano,
-                    'valor' =>  $valueAdmin->value,
-                ]);
-            }
+            /** CRIAR  */
 
             \DB::commit();
-            return response()->json(['message' => 'Atendimento finalizado com sucesso'], 200);
+            return response()->json(['message' => 'Procedimento finalizado com sucesso'], 200);
         } catch (\Throwable $e) {
             \DB::rollBack();
             // Lide com exceções ou erros, se necessário

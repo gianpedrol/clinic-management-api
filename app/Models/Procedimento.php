@@ -5,12 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ProfissionalProcedimento extends Model
+class Procedimento extends Model
 {
     use HasFactory;
+
     protected $fillable = [
-        'profissional_id',
-        'procedimento_id',
-        'price'
+        'nome_procedimento',
+        'pacote_id',
+        'descricao',
+        'porcentagem_clinica'
     ];
 }

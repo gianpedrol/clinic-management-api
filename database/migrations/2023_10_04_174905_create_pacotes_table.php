@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateServicosTable extends Migration
+class CreatePacotesTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,9 +13,11 @@ class CreateServicosTable extends Migration
      */
     public function up()
     {
-        Schema::create('servicos', function (Blueprint $table) {
+        Schema::create('pacotes', function (Blueprint $table) {
             $table->id();
-            $table->string('servico');
+            $table->string('pacote');
+            $table->float('valor');
+            $table->string('descricao');
             $table->integer('percentual_admin')->default(0);
             $table->timestamps();
         });

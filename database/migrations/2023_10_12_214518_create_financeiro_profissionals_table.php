@@ -15,10 +15,12 @@ class CreateFinanceiroProfissionalsTable extends Migration
     {
         Schema::create('financeiro_profissionals', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('atendimento_id');
+            $table->unsignedInteger('profissional_id')->references('id')->on('users')->onUpdate('no action')->onDelete('cascade');
+            $table->unsignedInteger('atendimento_id')->references('id')->on('atendimentos')->onUpdate('no action')->onDelete('cascade');
+            $table->unsignedInteger('procedimento_id')->references('id')->on('procedimento')->onUpdate('no action')->onDelete('cascade');
             $table->float('value', 8, 2);
             $table->boolean('receipt')->default(false);
-            $table->foreign('atendimento_id')->references('id')->on('atendimentos')->onUpdate('no action')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

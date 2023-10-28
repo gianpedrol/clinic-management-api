@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Atendimento\AtendimentoController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Http\Request;
@@ -26,9 +27,19 @@ Route::group([
     Route::post('me',  [AuthController::class, 'me']);
 });
 
+
+Route::post('registrar/atendimento', [AtendimentoController::class, 'criarAtendimento']);
 Route::middleware('auth:api')->group(function () {
 
     /**Rotas de Usurario */
 
     Route::post('register/user', [UserController::class, 'registerUser']);
+
+    Route::post('registrar/atendimento', [AtendimentoController::class, 'criarAtendimento']);
+    Route::post('atendimento/cancelar/{id}', [AtendimentoController::class, 'cancelarAtendimento']);
+    Route::post('atendimento/finalizar/{id}', [AtendimentoController::class, 'finalizarAtendimento']);
+    Route::post('atendimento/finalizar-procedimento', [AtendimentoController::class, 'finalizarProcedimentoProfissional']);
+    Route::get('agendamentos/profissional', [AtendimentoController::class, 'listarAgendamentosProfissional']);
+    Route::get('atendimentos/clinicas', [AtendimentoController::class, 'listarAtendimentosClinicas']);
+    Route::get('atendimento/detalhes/{id}', [AtendimentoController::class, 'detalhesAtendimento']);
 });

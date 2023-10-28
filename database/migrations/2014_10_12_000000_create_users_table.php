@@ -19,7 +19,8 @@ class CreateUsersTable extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->integer('role_id')->comment(['1' => 'ADMIN', '2' => 'PROFISSIONAL', '3' => 'CLIENTE']);
+            $table->integer('role_id')->comment('User Role: 1 - ADMIN, 2 - PROFISSIONAL, 3 - CLIENTE');
+
             $table->bigInteger('whatsapp');
             $table->string('endereço');
             $table->string('estado');

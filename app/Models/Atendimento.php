@@ -22,5 +22,6 @@ class Atendimento extends Model
         'preco_estimado',
         'discount',
         'preco_total',
+        'receipt'
     ];
 }
