@@ -20,13 +20,13 @@ class CreateUsersTable extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->integer('role_id')->comment('User Role: 1 - ADMIN, 2 - PROFISSIONAL, 3 - CLIENTE');
-
-            $table->bigInteger('whatsapp');
-            $table->string('endereço');
-            $table->string('estado');
-            $table->string('pais');
-            $table->string('cidade');
-            $table->date('birthdate');
+            $table->integer('status')->comment('[0 => inativo, 1 => ativo, 2 => Pendente]')->default(0);
+            $table->bigInteger('whatsapp')->nullable();
+            $table->string('endereço')->nullable();
+            $table->string('estado')->nullable();
+            $table->string('pais')->nullable();
+            $table->string('cidade')->nullable();
+            $table->date('birthdate')->nullable();
             $table->boolean('special_user')->default(false)->comment('usuario que não terá desconto da porcentagem da clinica');
             $table->rememberToken();
             $table->timestamps();

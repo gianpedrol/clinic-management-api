@@ -18,8 +18,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PacoteSeeder::class,
             ProcedimentoSeeder::class,
-            ProfissionalProcedimentosSeeder::class,
             UsersSeeder::class,
+            ProfissionalProcedimentosSeeder::class,
+            ProfissionalAgendaSeeder::class,
+            UserHorarioTrabalhoSeeder::class
         ]);
     }
 }

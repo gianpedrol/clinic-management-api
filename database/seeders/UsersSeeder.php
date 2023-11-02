@@ -15,6 +15,19 @@ class UsersSeeder extends Seeder
      */
     public function run()
     {
+        User::create([
+            'name' => 'Dev Solvetech',
+            'email' => 'dev@solvetech.digital',
+            'password' => Hash::make('654321'),
+            'status' => 1,
+            'role_id' => 1, // 'PROFISSIONAL'
+            'whatsapp' => null,
+            'endereço' => null,
+            'estado' => null,
+            'pais' => null,
+            'cidade' => null,
+            'birthdate' => null,
+        ]);
 
         User::create([
             'name' => 'Profissional 1',
@@ -27,6 +40,7 @@ class UsersSeeder extends Seeder
             'pais' => 'Some Country',
             'cidade' => 'Some City',
             'birthdate' => '1990-01-01',
+            'status' => 1,
         ]);
 
         User::create([
@@ -40,8 +54,9 @@ class UsersSeeder extends Seeder
             'pais' => 'Another Country',
             'cidade' => 'Another City',
             'birthdate' => '1995-05-05',
+            'status' => 1,
         ]);
-        
+
         User::create([
             'name' => 'Profissional 2',
             'email' => 'profissional2@example.com',
@@ -53,6 +68,7 @@ class UsersSeeder extends Seeder
             'pais' => 'Another Country',
             'cidade' => 'Another City',
             'birthdate' => '1985-08-15',
+            'status' => 1,
         ]);
 
         User::create([
@@ -66,6 +82,7 @@ class UsersSeeder extends Seeder
             'pais' => 'Yet Another Country',
             'cidade' => 'Yet Another City',
             'birthdate' => '1980-03-20',
+            'status' => 1,
         ]);
 
         User::create([
@@ -79,6 +96,7 @@ class UsersSeeder extends Seeder
             'pais' => 'Some Country',
             'cidade' => 'Some City',
             'birthdate' => '1992-12-10',
+            'status' => 1,
         ]);
 
         User::create([
@@ -92,6 +110,7 @@ class UsersSeeder extends Seeder
             'pais' => 'New Country',
             'cidade' => 'New City',
             'birthdate' => '1998-06-25',
+            'status' => 1,
         ]);
 
         // Add more User records with 'PROFISSIONAL' or 'CLIENTE' role_id as needed

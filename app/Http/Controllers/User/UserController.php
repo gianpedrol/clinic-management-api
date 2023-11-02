@@ -4,6 +4,9 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Mail\SendLoginUser;
+use App\Models\Procedimento;
+use App\Models\ProfissionalAgenda;
+use App\Models\ProfissionalProcedimento;
 use App\Models\ProfissionalServico;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -47,13 +50,13 @@ class UserController extends Controller
          *
          */
 
-        $data = $request->only('name', 'email', 'cpf', 'birthdate', 'phone', 'role_id', 'password', 'services');
+        $data = $request->only('name', 'email', 'cpf', 'birthdate', 'phone', 'role_id', 'password', 'procedimentos');
         $user = User::where(['email' => $data['email']])->first();
         if ($user) {
             return response()->json(['error' => 'User Already exists'], 400);
         }
 
-        $senha_md5 = '654321';//Descomentar após testes
+        $senha_md5 = '654321'; //Descomentar após testes
         //$senha_md5 = $data['password'];
         $senha_temp = bcrypt($senha_md5);
 
@@ -70,10 +73,12 @@ class UserController extends Controller
                 'role_id' => $data['role_id']
             ]);
 
-            if($data['role_id'] == 2){
-                foreach ($data['services'] as $item)
-                $user['services'] = ProfissionalServico::create([
-                    'servico_id' => $item->service_id,
+            if ($data['role_id'] == 2) {
+                foreach ($data['procedimentos'] as $item)
+                    $procedimento = Procedimento::findOrfail($item->procedimento_id);
+                $user['procedimentos'] = ProfissionalProcedimento::create([
+                    'user_id' => $user->id,
+                    'procedimento_id' =>  $procedimento->id,
                     'price' => $item->price,
                 ]);
             }
@@ -117,5 +122,28 @@ class UserController extends Controller
         }
 
         return response()->json(['status' => 'ok', 'message' => 'User deleted successfully'], 200);
+    }
+
+    public function listUsuariosProcedimentos($id)
+    {
+        $procedimento = Procedimento::findOrfail($id);
+
+        $procedimentosUsers = ProfissionalProcedimento::where('procedimento_id', $procedimento->id)->get();
+
+        $users = [];
+        foreach ($procedimentosUsers as $item) {
+            $users[] = User::where("id", $item->user_id)->first();
+        }
+
+        return response()->json(['status' => 'ok', 'message' => 'Lista de Uusários profissional', $users], 200);
+    }
+
+    public function listarHorariosDisponiveis($profissionalId)
+    {
+        $horariosDisponiveis = ProfissionalAgenda::where('profissional_id', $profissionalId)
+            ->where('disponivel', true)
+            ->get();
+
+        return response()->json(['status' => 'ok', 'message' => 'Lista de Horários disponiveis', $horariosDisponiveis], 200);
     }
 }

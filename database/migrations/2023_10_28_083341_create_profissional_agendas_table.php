@@ -15,9 +15,10 @@ class CreateProfissionalAgendasTable extends Migration
     {
         Schema::create('profissional_agendas', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('procedimento_id')->references('id')->on('procedimentos')->onUpdate('no action')->onDelete('cascade');
+            $table->string('motivo')->nullable();
+            $table->unsignedBigInteger('procedimento_id')->references('id')->on('procedimentos')->onUpdate('no action')->onDelete('cascade')->nullable();
             $table->unsignedBigInteger('profissional_id')->references('id')->on('profissionais')->onUpdate('no action')->onDelete('cascade');
-            $table->unsignedBigInteger('atendimento_id')->references('id')->on('atendimentos')->onUpdate('no action')->onDelete('cascade');
+            $table->unsignedBigInteger('atendimento_id')->references('id')->on('atendimentos')->onUpdate('no action')->onDelete('cascade')->nullable();
             $table->date('data');
             $table->time('hora_inicio');
             $table->time('hora_fim');

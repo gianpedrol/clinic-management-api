@@ -1,8 +1,9 @@
 <?php
 
+use App\Http\Controllers\Agenda\AgendaController;
 use App\Http\Controllers\Atendimento\AtendimentoController;
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Service\ServiceController;
+use App\Http\Controllers\Pacote\PacoteController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,18 +19,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::group([
-    'middleware' => 'api',
-    'prefix' => 'auth'
-], function () {
-    Route::post('login', [AuthController::class, 'login']);
-    Route::post('logout',  [AuthController::class, 'logout']);
-    Route::post('refresh',  [AuthController::class, 'refresh']);
-    Route::post('me',  [AuthController::class, 'me']);
-});
+Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/logout', [AuthController::class, 'logout']);
 
 
-Route::post('registrar/atendimento', [AtendimentoController::class, 'criarAtendimento']);
+
 Route::middleware('auth:api')->group(function () {
 
     /**Rotas de Usurario */
@@ -38,6 +32,8 @@ Route::middleware('auth:api')->group(function () {
     Route::get('lista/usuarios', [UserController::class, 'listUsers']);
     Route::get('detalhes/usuario/{id}', [UserController::class, 'showUser']);
     Route::delete('delete/user/{id}', [UserController::class, 'deleteUser']);
+
+    Route::get('profissional/{id}/agenda', [AgendaController::class, 'listarDiasHorariosDisponiveis']);
 
     /**Rotas de atendimento */
 
@@ -52,9 +48,12 @@ Route::middleware('auth:api')->group(function () {
 
 
     /** Rotas de Serviço */
+    Route::get('lista/usuarios/procedimento/{id}', [UserController::class, 'listUsuariosProcedimentos']);
 
-    Route::post('adicionar/servico', [ServiceController::class, 'createService']);
-    Route::get('lista/servicos', [ServiceController::class, 'listServicos']);
-    Route::get('detalhe/servico/{id}', [ServiceController::class, 'showServico']);
-    Route::put('atualizar/servico/{id}', [ServiceController::class, 'updateServico']);
+    Route::post('adicionar/servico', [PacoteController::class, 'createService']);
+    Route::get('lista/pacotes', [PacoteController::class, 'listPacotes']);
+    Route::get('lista/procedimentos', [PacoteController::class, 'listaProcedimentos']);
+    Route::get('detalhe/pacote/{id}', [PacoteController::class, 'showPacote']);
+    Route::get('detalhe/procedimento/{id}', [PacoteController::class, 'showProcedimento']);
+    Route::put('atualizar/servico/{id}', [PacoteController::class, 'updateServico']);
 });

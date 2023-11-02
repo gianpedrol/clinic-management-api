@@ -356,7 +356,6 @@ class AtendimentoController extends Controller
                 'procedimento_id' => $procedimentoAtendimento->procedimento_id,
                 'value' => $procedimentoAtendimento->valor_procedimento_profissional
             ]);
-
             /** CRIAR  */
 
             \DB::commit();

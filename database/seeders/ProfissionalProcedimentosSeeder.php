@@ -17,6 +17,12 @@ class ProfissionalProcedimentosSeeder extends Seeder
      */
     public function run()
     {
+        try {
+            // Your seeder code here
+        } catch (\Exception $e) {
+            // Log or print the exception message for debugging
+            \Log::error($e->getMessage());
+        }
         // Get all professional users
         $professionalUsers = User::where('role_id', 2)->get(); // Assuming '2' is the role_id for professionals
 
@@ -35,7 +41,7 @@ class ProfissionalProcedimentosSeeder extends Seeder
                 ProfissionalProcedimento::create([
                     'user_id' => $professionalUser->id,
                     'procedimento_id' => $procedure['id'],
-                    'price' => 0.00, // Set the price as needed
+                    'price' => 120.00, // Set the price as needed
                 ]);
             }
         }

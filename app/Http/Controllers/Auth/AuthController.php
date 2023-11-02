@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use Hash;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -22,15 +25,31 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login()
+    public function login(Request $request)
     {
-        $credentials = request(['email', 'password']);
+        $data  = $request->only('email', 'password');
+        $user = User::where('email', $data['email'])->first();
 
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        if (!$user) {
+            return response()->json(['message' => 'User not Found '], 404);
         }
 
-        return $this->respondWithToken($token);
+        if ($user->status == 0) {
+            return response()->json(['message' => 'User Inactive '], 403);
+        }
+        $token = auth()->login($user);;
+        $passVerication = Hash::check($data['password'],  $user->password);
+
+        if (empty($user) ||  $passVerication == false) {
+            return response()->json(['status' => 'error', 'message' => 'the login is wrong'], 401);
+        }
+        if ($token) {
+            $array['token'] = $token;
+        } else {
+            $array['message'] = 'Incorrect username or password';
+        }
+
+        return response()->json(['message' => "User Logged in!", 'token' => $array['token'], 'user' => $user], 200);
     }
 
     /**

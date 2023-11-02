@@ -8,8 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class ProfissionalProcedimento extends Model
 {
     use HasFactory;
+
+    protected $table = 'profissional_procedimentos';
+
     protected $fillable = [
-        'profissional_id',
+        'user_id',
         'procedimento_id',
         'price'
     ];
