@@ -20,7 +20,7 @@ class CreateAtendimentosTable extends Migration
             $table->integer('tipo_servico')->comment('Tipo de Serviço: 1 - pacote, 2 - avulso');
 
             $table->unsignedBigInteger('servico_id')->nullable();
-            $table->integer('status')->comment('Status: 1 - confirmado, 2 - cancelado, 3 - finalizado, 4 - agendado');
+            $table->integer('status')->comment('Status: 1 - confirmado, 2 - cancelado, 3 - finalizado, 4 - agendado')->default(4);
 
             $table->integer('metodo_pagamento')->comment('Payment Method: 1 - Pix, 2 - Débito, 3 - Crédito, 4 - GRATUITO');
 

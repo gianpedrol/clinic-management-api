@@ -32,8 +32,9 @@ class AtendimentoController extends Controller
 
     public function criarAtendimento(Request $request)
     {
-        $data = $request->only('client_id', 'tipo_servico', 'convenio_id', 'procedimentos', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount', 'receipt');
+        $data = $request->only('client_id', 'tipo_servico', 'convenio_id', 'procedimentos', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount', 'receipt','pacote_id');
 
+        
         // Verifica se o paciente (client_id) existe como usuário e é um cliente (role_id 1)
         $paciente = User::where('id', $data['client_id'])->first();
         if (!$paciente) {
@@ -41,8 +42,8 @@ class AtendimentoController extends Controller
         }
 
         if ($data['tipo_servico'] == 1) {
-            $pacote = Pacote::where('id', $data['pacote_id'])->first();
 
+            $pacote = Pacote::where('id', $data['pacote_id'])->first();
             $pacote['procedimentos'] = Procedimento::where("pacote_id", $pacote->id)->get();
 
             if (!$pacote) {
@@ -119,10 +120,12 @@ class AtendimentoController extends Controller
 
             // Loop through the procedures in the request
             foreach ($data['procedimentos'] as $procedureData) {
+                $date = Carbon::createFromFormat('d/m/Y', $procedureData['data'])->format('Y-m-d');
                 // Create a procedure record for each procedure
                 $procedure = ProcedimentoAtendimento::create([
+                    'atendimento_id' => $atendimento->id,
                     'procedimento_id' => $procedureData['procedimento_id'],
-                    'data' => $procedureData['data'],
+                    'data' => $date,
                     'hora_inicio' => $procedureData['hora_inicio'],
                     'hora_fim' => $procedureData['hora_fim'],
                     'profissional_id' => $procedureData['profissional_id'],
@@ -132,34 +135,32 @@ class AtendimentoController extends Controller
                 // Create and save the agenda record for the professional
                 ProfissionalAgenda::create([
                     'profissional_id' => $procedureData['profissional_id'],
-                    'data' => $procedureData['data'],
+                    'data' =>  $date,
                     'hora_inicio' => $procedureData['hora_inicio'],
                     'hora_fim' => $procedureData['hora_fim'],
                 ]);
             }
         } else if ($data['tipo_servico'] == 2) {
 
-            // Criar o Atendimento
-            $atendimento = Atendimento::create([
-                'client_id' => $data['client_id'],
-                'tipo_servico' => $data['tipo_servico'],
-                'convenio_id' => $data['convenio_id'],
-                'metodo_pagamento' => $data['metodo_pagamento'],
-                'descricao' => $data['descricao'],
-                'discount' => $data['discount'],
-            ]);
 
             $totalAtendimento = 0;
 
 
             // Loop through the procedures in the request
             foreach ($data['procedimentos'] as $procedureData) {
-                $procedimento = Procedimento::where("pacote_id", $procedureData['procedimento_id'])->get();
+                $date = Carbon::createFromFormat('d/m/Y', $procedureData['data'])->format('Y-m-d');
+                $procedimento = Procedimento::where("id", $procedureData['procedimento_id'])->first();
                 // Create a procedure record for each procedure
-                $profissional = User::findOrfail($data['profissional_id']);
 
+                $profissional = User::where('id',$procedureData['profissional_id'])->first();
+
+                if($profissional->role_id != 2){
+                    return response()->json(['message' => 'Não é um profissional'], 400);
+                }
+        
                 $procedimentoProfissional = ProfissionalProcedimento::where('user_id', $profissional->id)->where('procedimento_id', $procedimento->id)->first();
-
+        
+        
                 // Verificar se há um desconto, subtrair do percentual da clínica
                 $percentualClinica = $procedimento->percentual_clinic;
                 if (isset($data['discount'])) {
@@ -172,7 +173,7 @@ class AtendimentoController extends Controller
                 }
 
                 // Calcular o valor para o profissional (preço do procedimento do profissional)
-                $precoProfissional = $profissional->procedimentos()->where('procedimento_id', $procedimento->id)->first()->price;
+                $precoProfissional = $procedimentoProfissional->first()->price;
 
                 // Calcular o valor que ficará para a clínica com base no percentual
                 $valorClinica = ($percentualClinica / 100) * $precoProfissional;
@@ -180,9 +181,22 @@ class AtendimentoController extends Controller
                 // Adicionar o valor do procedimento ao valor total do atendimento
                 $totalAtendimento += $precoProfissional;
 
-                $procedure = ProcedimentoAtendimento::create([
-                    'procedimento_id' => $procedimento,
-                    'data' => $procedureData['data'],
+                            // Criar o Atendimento
+            $atendimento = Atendimento::create([
+                'client_id' => $data['client_id'],
+                'tipo_servico' => $data['tipo_servico'],
+                'convenio_id' => $data['convenio_id'],
+                'metodo_pagamento' => $data['metodo_pagamento'],
+                'descricao' => $data['descricao'],
+                'discount' => $data['discount'],
+                'preco_estimado' =>  $totalAtendimento,
+                'preco_total' =>  $totalAtendimento
+            ]);
+
+                ProcedimentoAtendimento::create([
+                    'atendimento_id' => $atendimento->id,
+                    'procedimento_id' => $procedimento->id,
+                    'data' =>  $date,
                     'hora_inicio' => $procedureData['hora_inicio'],
                     'hora_fim' => $procedureData['hora_fim'],
                     'profissional_id' => $procedureData['profissional_id'],
@@ -193,19 +207,20 @@ class AtendimentoController extends Controller
                 // Create and save the agenda record for the professional
                 ProfissionalAgenda::create([
                     'profissional_id' => $procedureData['profissional_id'],
-                    'data' => $procedureData['data'],
+                    'data' =>  $date,
                     'hora_inicio' => $procedureData['hora_inicio'],
                     'hora_fim' => $procedureData['hora_fim'],
                 ]);
             }
 
             // Atualizar o valor total do atendimento no registro de atendimento
-            $atendimento->preco_total = $totalAtendimento;
             $percentualClinica = $procedimento->percentual_clinic;
             if (isset($data['discount'])) {
                 $percentualClinica -= $data['discount'];
             }
 
+
+            
             // Verificar se o percentual da clínica é negativo e ajustá-lo para um mínimo de 0
             $percentualClinica = max(0, $percentualClinica);
 
@@ -214,6 +229,7 @@ class AtendimentoController extends Controller
             if ($data['receipt'] == true) {
 
                 $atendimento->update(['receipt' => true]);
+
 
                 // Criar o registro de FinanceiroAdmin
                 FinanceiroAdmin::create([
