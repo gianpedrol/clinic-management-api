@@ -32,9 +32,9 @@ class AtendimentoController extends Controller
 
     public function criarAtendimento(Request $request)
     {
-        $data = $request->only('client_id', 'tipo_servico', 'convenio_id', 'procedimentos', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount', 'receipt','pacote_id');
+        $data = $request->only('client_id', 'tipo_servico', 'convenio_id', 'procedimentos', 'data', 'hora', 'metodo_pagamento', 'descricao', 'discount', 'receipt', 'pacote_id');
 
-        
+
         // Verifica se o paciente (client_id) existe como usuário e é um cliente (role_id 1)
         $paciente = User::where('id', $data['client_id'])->first();
         if (!$paciente) {
@@ -134,6 +134,7 @@ class AtendimentoController extends Controller
 
                 // Create and save the agenda record for the professional
                 ProfissionalAgenda::create([
+                    'procedimento_id' => $procedureData['procedimento_id'],
                     'profissional_id' => $procedureData['profissional_id'],
                     'data' =>  $date,
                     'hora_inicio' => $procedureData['hora_inicio'],
@@ -142,25 +143,22 @@ class AtendimentoController extends Controller
             }
         } else if ($data['tipo_servico'] == 2) {
 
-
             $totalAtendimento = 0;
-
-
             // Loop through the procedures in the request
             foreach ($data['procedimentos'] as $procedureData) {
                 $date = Carbon::createFromFormat('d/m/Y', $procedureData['data'])->format('Y-m-d');
                 $procedimento = Procedimento::where("id", $procedureData['procedimento_id'])->first();
                 // Create a procedure record for each procedure
 
-                $profissional = User::where('id',$procedureData['profissional_id'])->first();
+                $profissional = User::where('id', $procedureData['profissional_id'])->first();
 
-                if($profissional->role_id != 2){
+                if ($profissional->role_id != 2) {
                     return response()->json(['message' => 'Não é um profissional'], 400);
                 }
-        
+
                 $procedimentoProfissional = ProfissionalProcedimento::where('user_id', $profissional->id)->where('procedimento_id', $procedimento->id)->first();
-        
-        
+
+
                 // Verificar se há um desconto, subtrair do percentual da clínica
                 $percentualClinica = $procedimento->percentual_clinic;
                 if (isset($data['discount'])) {
@@ -181,17 +179,17 @@ class AtendimentoController extends Controller
                 // Adicionar o valor do procedimento ao valor total do atendimento
                 $totalAtendimento += $precoProfissional;
 
-                            // Criar o Atendimento
-            $atendimento = Atendimento::create([
-                'client_id' => $data['client_id'],
-                'tipo_servico' => $data['tipo_servico'],
-                'convenio_id' => $data['convenio_id'],
-                'metodo_pagamento' => $data['metodo_pagamento'],
-                'descricao' => $data['descricao'],
-                'discount' => $data['discount'],
-                'preco_estimado' =>  $totalAtendimento,
-                'preco_total' =>  $totalAtendimento
-            ]);
+                // Criar o Atendimento
+                $atendimento = Atendimento::create([
+                    'client_id' => $data['client_id'],
+                    'tipo_servico' => $data['tipo_servico'],
+                    'convenio_id' => $data['convenio_id'],
+                    'metodo_pagamento' => $data['metodo_pagamento'],
+                    'descricao' => $data['descricao'],
+                    'discount' => $data['discount'],
+                    'preco_estimado' =>  $totalAtendimento,
+                    'preco_total' =>  $totalAtendimento
+                ]);
 
                 ProcedimentoAtendimento::create([
                     'atendimento_id' => $atendimento->id,
@@ -220,7 +218,7 @@ class AtendimentoController extends Controller
             }
 
 
-            
+
             // Verificar se o percentual da clínica é negativo e ajustá-lo para um mínimo de 0
             $percentualClinica = max(0, $percentualClinica);
 

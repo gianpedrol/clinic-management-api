@@ -9,6 +9,7 @@ class ProfissionalAgenda extends Model
 {
     use HasFactory;
     protected $fillable = [
+        'motivo',
         'procedimento_id',
         'profissional_id',
         'atendimento_id',
