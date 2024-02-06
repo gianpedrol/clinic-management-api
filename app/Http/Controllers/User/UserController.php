@@ -157,6 +157,7 @@ class UserController extends Controller
         $data = $request->input('data');
         $hora = $request->input('hora');
 
+
         $profissionaisDisponiveis = ProfissionalAgenda::where([
             ['data', '=', $data],
             ['hora_inicio', '<=', $hora],
