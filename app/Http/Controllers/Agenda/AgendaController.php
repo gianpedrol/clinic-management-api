@@ -26,7 +26,7 @@ class AgendaController extends Controller
         // Verifique se existem agendamentos para o usuário na data especificada
         $agendamentos = ProfissionalAgenda::where('profissional_id', $usuarioId->id)
             ->whereDate('data', $dataEspecifica)
-            
+
             ->get();
 
         $horariosDisponiveis = [];
@@ -87,5 +87,37 @@ class AgendaController extends Controller
         }
 
         return $horariosDisponiveis;
+    }
+
+    public function definirDisponibilidade(Request $request)
+    {
+        $request->validate([
+            'dias' => 'required|array',
+            'horarios' => 'required|array',
+        ]);
+
+        $dias = $request->input('dias');
+        $horarios = $request->input('horarios');
+        $profissionalId = auth()->user()->id; // ou qualquer método que você use para obter o ID do usuário logado
+
+        // Limpa as entradas existentes para o profissional
+        ProfissionalAgenda::where('profissional_id', $profissionalId)->delete();
+
+        // Cria as novas entradas com os dias e horários indisponíveis
+        foreach ($dias as $dia) {
+            foreach ($horarios as $horario) {
+                ProfissionalAgenda::create([
+                    'motivo' => "",
+                    'profissional_id' => $profissionalId,
+                    'data' => $dia,
+                    'hora_inicio' => $horario['inicio'],
+                    'hora_fim' => $horario['fim'],
+                    'disponivel' => false,
+                    // Adicione outros campos necessários
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Disponibilidade definida com sucesso']);
     }
 }

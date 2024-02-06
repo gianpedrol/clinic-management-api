@@ -146,4 +146,27 @@ class UserController extends Controller
 
         return response()->json(['status' => 'ok', 'message' => 'Lista de Horários disponiveis', $horariosDisponiveis], 200);
     }
+
+    public function profissionaisDisponiveis(Request $request)
+    {
+        $request->validate([
+            'data' => 'required|date',
+            'hora' => 'required|date_format:H:i',
+        ]);
+
+        $data = $request->input('data');
+        $hora = $request->input('hora');
+
+
+        $profissionaisDisponiveis = ProfissionalAgenda::where([
+            ['data', '=', $data],
+            ['hora_inicio', '<=', $hora],
+            ['hora_fim', '>=', $hora],
+            ['disponivel', '=', true],
+        ])->groupBy('profissional_id')->pluck('profissional_id');
+
+        $profissionais = User::whereIn('id', $profissionaisDisponiveis)->get();
+
+        return response()->json(['profissionais' => $profissionais]);
+    }
 }
